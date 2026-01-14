@@ -99,6 +99,24 @@ export ENABLE_CONTRIB=1
 # export ENABLE_ROLLING=1 # Build from last commit
 # export OPENCV_PYTHON_SKIP_GIT_COMMANDS=1
 
+CREATED_SYMLINKS=""
+
+setup_symlink() {
+    local target="$1"
+    local link_name="$2"
+    
+    if [ ! -e "$link_name" ]; then
+        ln -s "$target" "$link_name"
+        CREATED_SYMLINKS="$link_name $CREATED_SYMLINKS"
+    else
+        echo "CUDA symlink or library already exists: $link_name"
+    fi
+}
+
+setup_symlink "${CMAKE_LIBRARY_PATH}/libcuda.so" "${CMAKE_LIBRARY_PATH}/libcuda.so.1"
+setup_symlink "${CMAKE_LIBRARY_PATH}/libcuda.so" "${CMAKE_LIBRARY_PATH}/../libcuda.so"
+setup_symlink "${CMAKE_LIBRARY_PATH}/libcuda.so.1" "${CMAKE_LIBRARY_PATH}/../libcuda.so.1"
+
 # Install dependencies for building the wheel
 uv pip install scikit-build
 
@@ -140,6 +158,10 @@ echo "Building C++ Debian packages..."
 make -j$(nproc)
 make install
 make package
+
+for link in $CREATED_SYMLINKS; do
+    rm "$link"
+done
 
 # upload packages to apt server
 mkdir -p /tmp/debs/
