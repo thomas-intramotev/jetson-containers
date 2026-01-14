@@ -12,7 +12,9 @@ if [[ $DISTRO == "18.04" || $DISTRO == "20.04" ]]; then
 	EXTRAS="libavresample-dev libdc1394-22-dev"
 fi
 
-if [[ $DISTRO == "24.04" ]]; then
+if [[ $DISTRO == "20.04" ]]; then
+  EXTRAS="libtbb2 libtbb-dev liblapacke-dev $EXTRAS"
+elif [[ $DISTRO == "24.04" ]]; then
   EXTRAS="libtbbmalloc2 libtbb-dev $EXTRAS"
 else
   EXTRAS="libtbb2 libtbb2-dev liblapacke-dev $EXTRAS"
