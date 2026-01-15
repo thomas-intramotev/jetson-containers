@@ -50,16 +50,23 @@ RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Skipping build dependency installation (FORCE_BUILD=${FORCE_BUILD})"; \
     fi
 
-
 # Pre-clone PyTorch repository to cache it
 RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Pre-cloning PyTorch repository..." && \
-        rm -rf /opt/pytorch-cache && \
-        git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch-cache && \
+        rm -rf /opt/pytorch && \
+        (git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch || \
+         git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch) && \
         echo "PyTorch repository cached successfully"; \
     else \
         echo "Skipping PyTorch repository cloning (FORCE_BUILD=${FORCE_BUILD})"; \
     fi
+
+WORKDIR /opt/pytorch
+RUN git fetch origin tag "v2.1.2" --depth 1 && git checkout "v2.1.2" && git submodule sync && git submodule update --init --recursive
+WORKDIR /
+
+ENV TORCH_VERSION=2.1 \
+    PYTORCH_BUILD_VERSION=2.1.2
 
 COPY requirements.txt requirements-build.txt /tmp/
 
@@ -76,4 +83,4 @@ RUN if [ "${FORCE_BUILD}" = "on" ]; then \
 COPY install.sh build.sh /tmp/pytorch/
 
 # attempt to install from pip, and fall back to building it
-RUN /tmp/pytorch/install.sh || /tmp/pytorch/build.sh
+RUN --mount=type=cache,target=/opt/pytorch/build /tmp/pytorch/install.sh || /tmp/pytorch/build.sh

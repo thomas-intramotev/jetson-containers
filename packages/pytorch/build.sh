@@ -5,8 +5,8 @@ set -ex
 echo "Building PyTorch ${PYTORCH_BUILD_VERSION}"
 
 # build from source
-git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch ||
-git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch
+# git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch ||
+# git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch
 cd /opt/pytorch
 
 # https://github.com/pytorch/pytorch/issues/138333
@@ -16,15 +16,24 @@ grep 'PR_SVE_GET_VL' ${CPUINFO_PATCH} || echo "patched ${CPUINFO_PATCH}"
 tail -20 ${CPUINFO_PATCH}
 
 uv pip install -r requirements.txt
+uv pip install -r /tmp/requirements-build.txt
 uv pip install scikit-build ninja
 
+if [ -f "build/CMakeCache.txt" ]; then
+    rm -rf build/CMakeCache.txt
+fi
 
 #TORCH_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
 # https://github.com/pytorch/pytorch/pull/157791/files#diff-f271c3ed0c135590409465f4ad55c570c418d2c0509bbf1b1352ebdd1e6611d1
-if [[ "$CUDA_VERSION" == "12.6" ]]; then
+CUDA_MAJOR=$(echo "$CUDA_VERSION" | cut -d. -f1)
+CUDA_MINOR=$(echo "$CUDA_VERSION" | cut -d. -f2)
+
+if [[ "$CUDA_MAJOR" -gt 12 ]] || [[ "$CUDA_MAJOR" -eq 12 && "$CUDA_MINOR" -ge 6 ]]; then
   export TORCH_NVCC_FLAGS="-Xfatbin -compress-all -compress-mode=balance"
-else
+elif [[ "$CUDA_MAJOR" -gt 12 ]] || [[ "$CUDA_MAJOR" -eq 12 && "$CUDA_MINOR" -ge 4 ]]; then
   export TORCH_NVCC_FLAGS="-Xfatbin -compress-all -compress-mode=size"
+else
+  export TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
 fi
 
 echo "=== Fixing cuSPARSELt detection ==="
@@ -94,10 +103,10 @@ export USE_CUDNN=1
 export USE_CUSPARSELT=1
 export USE_CUDSS=1
 export USE_CUFILE=1
-export USE_XCCL=1
-export USE_C10D_XCCL=1
-export USE_DISTRIBUTED=1
-export USE_NCCL=1
+export USE_XCCL=${USE_NCCL:-1}
+export USE_C10D_XCCL=${USE_NCCL:-1}
+export USE_DISTRIBUTED=${USE_NCCL:-1}
+export USE_NCCL=${USE_NCCL:-1}
 export USE_NATIVE_ARCH=0
 export USE_TENSORPIPE=1
 export USE_FLASH_ATTENTION=1
