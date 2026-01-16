@@ -16,7 +16,6 @@ grep 'PR_SVE_GET_VL' ${CPUINFO_PATCH} || echo "patched ${CPUINFO_PATCH}"
 tail -20 ${CPUINFO_PATCH}
 
 uv pip install -r requirements.txt
-uv pip install -r /tmp/requirements-build.txt
 uv pip install scikit-build ninja
 
 # https://github.com/pytorch/pytorch/issues/121798

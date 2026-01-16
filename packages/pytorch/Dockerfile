@@ -61,21 +61,16 @@ RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Skipping PyTorch repository cloning (FORCE_BUILD=${FORCE_BUILD})"; \
     fi
 
-WORKDIR /opt/pytorch
-RUN git fetch origin tag "v2.1.2" --depth 1 && git checkout "v2.1.2" && git submodule sync && git submodule update --init --recursive
-WORKDIR /
-
-ENV TORCH_VERSION=2.1 \
-    PYTORCH_BUILD_VERSION=2.1.2
-
 COPY requirements.txt requirements-build.txt /tmp/
 
 # Conditional requirements installation
 RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         echo "Installing requirements.txt..." && \
-        uv pip install -r /tmp/requirements.txt \
+        uv pip install -r /tmp/requirements.txt && \
+        uv pip install -r /tmp/requirements-build.txt \
             && rm -rf ~/.cache/pip \
-            && rm /tmp/requirements.txt; \
+            && rm /tmp/requirements.txt \
+            && rm /tmp/requirements-build.txt; \
     else \
         echo "Skipping requirements installation (FORCE_BUILD=${FORCE_BUILD})"; \
     fi
