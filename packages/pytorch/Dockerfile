@@ -30,7 +30,8 @@ ARG TORCH_CUDA_ARCH_LIST \
     DISTRO="ubuntu2004" \
     FORCE_BUILD=${FORCE_BUILD}\
     PYTORCH_OFFICIAL_WHL=off \
-    IS_SBSA=${IS_SBSA}
+    IS_SBSA=${IS_SBSA} \
+    CACHE_BUILD_DIR=on
 
 ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST} \
     PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} \
@@ -77,5 +78,9 @@ RUN if [ "${FORCE_BUILD}" = "on" ]; then \
 
 COPY install.sh build.sh /tmp/pytorch/
 
-# attempt to install from pip, and fall back to building it
-RUN --mount=type=cache,target=/opt/pytorch/build /tmp/pytorch/install.sh || /tmp/pytorch/build.sh
+RUN --mount=type=cache,target=/opt/pytorch/build \
+    if [ ! "${CACHE_BUILD_DIR}" = "on" ]; then \
+        rm -rf /opt/pytorch/build/*; \
+    fi && \
+    # attempt to install from pip, and fall back to building it
+    ( /tmp/pytorch/install.sh || /tmp/pytorch/build.sh )

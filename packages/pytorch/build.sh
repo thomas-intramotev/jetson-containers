@@ -26,11 +26,6 @@ if [[ "$NUMPY_MAJOR" -ge 2 ]] && [[ "$PYTORCH_MAJOR" -lt 2 || ( "$PYTORCH_MAJOR"
     sed -i 's/descr->elsize/PyDataType_ELSIZE(descr)/g' torch/csrc/utils/tensor_numpy.cpp
 fi
 
-# Delete cache to force ATen codegen; necessary if temp-caching the build dir
-if [ -f "build/CMakeCache.txt" ]; then
-    rm -rf build/CMakeCache.txt
-fi
-
 #TORCH_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
 # https://github.com/pytorch/pytorch/pull/157791/files#diff-f271c3ed0c135590409465f4ad55c570c418d2c0509bbf1b1352ebdd1e6611d1
 CUDA_MAJOR=$(echo "$CUDA_VERSION" | cut -d. -f1)
@@ -74,6 +69,11 @@ else
     export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-1}
     export NCCL_P2P_DISABLE=${NCCL_P2P_DISABLE:-1}
     export NCCL_SHM_DISABLE=${NCCL_SHM_DISABLE:-1}
+fi
+
+# Delete cache to force ATen codegen; necessary if temp-caching the build dir
+if [[ "${CACHE_BUILD_DIR}" = "on" ]] && [[ -f "/opt/pytorch/build/CMakeCache.txt" ]]; then
+    rm -rf /opt/pytorch/build/CMakeCache.txt
 fi
 
 # Start resource monitoring in background
@@ -125,7 +125,9 @@ export BLAS="$BLAS"
 python3 setup.py bdist_wheel --dist-dir /opt
 
 cd /
-rm -rf /opt/pytorch
+# Delete everything under /opt/pytorch except the build cache; it won't be in 
+# the image anyway, and deleting it can cause 'resource busy' errors
+find /opt/pytorch -mindepth 1 -maxdepth 1 -not -path "/opt/pytorch/build" -exec rm -rf {} +
 # install the compiled wheel
 uv pip install /opt/torch*.whl
 python3 -c 'import torch; print(f"PyTorch {torch.__version__} installed successfully")'
