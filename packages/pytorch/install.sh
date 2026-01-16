@@ -26,8 +26,8 @@ fi
 
 UBUNTU_VERSION=$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2)
 
-if [[ "$UBUNTU_VERSION" == "22.04" ]]; then
-  echo "🟢 Ubuntu 22.04 detected — installing GCC 13 for GLIBCXX_3.4.32"
+if [[ "$UBUNTU_VERSION" == "22.04" ]] || [[ "$UBUNTU_VERSION" == "20.04" ]]; then
+  echo "🟢 Ubuntu 22.04 or 20.04 detected — installing GCC 13 for GLIBCXX_3.4.32"
 
   apt-get update
   apt-get install -y --no-install-recommends \
