@@ -19,6 +19,15 @@ uv pip install -r requirements.txt
 uv pip install -r /tmp/requirements-build.txt
 uv pip install scikit-build ninja
 
+# https://github.com/pytorch/pytorch/issues/121798
+NUMPY_MAJOR=$(python3 -c 'import numpy as np; print(np.__version__.split(".")[0])')
+PYTORCH_MAJOR=$(echo "$PYTORCH_BUILD_VERSION" | cut -d. -f1)
+PYTORCH_MINOR=$(echo "$PYTORCH_BUILD_VERSION" | cut -d. -f2)
+if [[ "$NUMPY_MAJOR" -ge 2 ]] && [[ "$PYTORCH_MAJOR" -lt 2 || ( "$PYTORCH_MAJOR" -eq 2 && "$PYTORCH_MINOR" -lt 4 ) ]]; then
+    sed -i 's/descr->elsize/PyDataType_ELSIZE(descr)/g' torch/csrc/utils/tensor_numpy.cpp
+fi
+
+# Delete cache to force ATen codegen; necessary if temp-caching the build dir
 if [ -f "build/CMakeCache.txt" ]; then
     rm -rf build/CMakeCache.txt
 fi
@@ -121,6 +130,9 @@ rm -rf /opt/pytorch
 # install the compiled wheel
 uv pip install /opt/torch*.whl
 python3 -c 'import torch; print(f"PyTorch {torch.__version__} installed successfully")'
+
+# Restore numpy version
+bash /tmp/numpy/install.sh
 
 # Verify installation in detail
 python3 -c 'import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.backends.cudnn.version()); print(torch.__config__.show());'
