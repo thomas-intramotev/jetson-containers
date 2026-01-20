@@ -13,6 +13,8 @@ ARG OPENCV_VERSION \
     OPENCV_PYTHON \
     OPENCV_URL \
     CUDA_ARCH_BIN \
+    ENABLE_CONTRIB=1 \
+    FORWARD_CONTRIB=0 \
     FORCE_BUILD=off \
     TMP=/tmp/opencv
 
@@ -43,6 +45,7 @@ COPY build.sh \
      install_deps.sh \
      install_deb.sh \
      patches.diff \
+     setup-stub.py \
      $TMP/
 
 COPY test.py $TMP/

@@ -19,7 +19,15 @@ else
     export OPENCV_DEB="OpenCV-${OPENCV_VERSION}.tar.gz"
     export OPENCV_URL=${TAR_INDEX_URL}/${OPENCV_DEB}
     $ROOT/install_deb.sh
-    uv pip install opencv-contrib-python~=${OPENCV_VERSION}
+
+    PY_PACKAGE=$( [ "$ENABLE_CONTRIB" -eq 1 ] && echo "opencv-contrib-python" || echo "opencv-python" )
+    uv pip install ${PY_PACKAGE}~=${OPENCV_VERSION}
+
+    if [[ "${ENABLE_CONTRIB}" -eq 1 ]] && [[ "${FORWARD_CONTRIB}" -eq 1 ]]; then
+        mkdir -p ${TMP}/opencv-python
+        mv ${TMP}/setup-stub.py ${TMP}/opencv-python/setup.py
+        uv pip install -e ${TMP}/opencv-python
+    fi
 fi
 
 # In buildkit=1 mode, we cannot test the installation here

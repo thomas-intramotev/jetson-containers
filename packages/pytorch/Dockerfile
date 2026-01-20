@@ -57,7 +57,6 @@ RUN if [ "${FORCE_BUILD}" = "on" ]; then \
         rm -rf /opt/pytorch && \
         (git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch || \
          git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch) && \
-        export PYTORCH_PRE_CLONED=1 && \
         echo "PyTorch repository cached successfully"; \
     else \
         echo "Skipping PyTorch repository cloning (FORCE_BUILD=${FORCE_BUILD})"; \

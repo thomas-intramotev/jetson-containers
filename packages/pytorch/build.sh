@@ -5,7 +5,7 @@ set -ex
 echo "Building PyTorch ${PYTORCH_BUILD_VERSION}"
 
 # build from source
-if [ ! -n "${PYTORCH_PRE_CLONED}" ]; then
+if [ ! -e "/opt/pytorch/.git" ]; then
     git clone --branch "v${PYTORCH_BUILD_VERSION}" --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch ||
     git clone --depth=1 --recursive https://github.com/pytorch/pytorch /opt/pytorch
 fi
@@ -112,7 +112,7 @@ export PYTORCH_BUILD_NUMBER=1
 export USE_CUDNN=1
 export USE_CUSPARSELT=1
 export USE_CUDSS=1
-export USE_CUFILE=1
+export USE_CUFILE=0
 export USE_XCCL=${USE_NCCL:-1}
 export USE_C10D_XCCL=${USE_NCCL:-1}
 export USE_DISTRIBUTED=${USE_NCCL:-1}

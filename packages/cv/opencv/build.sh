@@ -95,7 +95,7 @@ export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
 export CMAKE_POLICY_VERSION_MINIMUM="3.5"
 export CMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-export ENABLE_CONTRIB=1
+export ENABLE_CONTRIB=${ENABLE_CONTRIB:-1}
 # export ENABLE_ROLLING=1 # Build from last commit
 # export OPENCV_PYTHON_SKIP_GIT_COMMANDS=1
 
@@ -120,9 +120,10 @@ setup_symlink "${CMAKE_LIBRARY_PATH}/libcuda.so.1" "${CMAKE_LIBRARY_PATH}/../lib
 # Install dependencies for building the wheel
 uv pip install scikit-build
 
+enable_contrib_pybool=$( [ "${ENABLE_CONTRIB}" -eq 1 ] && echo "True" || echo "False" )
 cat <<EOF > /opt/opencv-python/cv2/version.py
 opencv_version = "${OPENCV_VERSION}"
-contrib = True
+contrib = ${enable_contrib_pybool}
 headless = False
 rolling = False
 EOF
@@ -137,6 +138,12 @@ rm -rf /opt/opencv-python
 uv pip install /opt/opencv*.whl
 python3 -c "import cv2; print('OpenCV version:', str(cv2.__version__)); print(cv2.getBuildInformation())"
 twine upload --verbose /opt/opencv*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+
+if [[ "${ENABLE_CONTRIB}" -eq 1 ]] && [[ "${FORWARD_CONTRIB}" -eq 1 ]]; then
+    mkdir -p ${TMP}/opencv-python
+    mv ${TMP}/setup-stub.py ${TMP}/opencv-python/setup.py
+    uv pip install -e ${TMP}/opencv-python
+fi
 
 # [FIX] Ensure the build directory is clean to avoid CMake caching issues from previous failed runs.
 echo "Configuring C++ Debian package build..."
