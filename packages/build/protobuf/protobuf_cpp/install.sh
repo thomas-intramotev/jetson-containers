@@ -46,6 +46,8 @@ else
 	cmake .. \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=/usr/local \
+		-DCMAKE_CXX_STANDARD=17 \
+		-DCMAKE_CXX_STANDARD_REQUIRED=ON \
 		-Dprotobuf_BUILD_TESTS=ON \
 		-Dprotobuf_BUILD_SHARED_LIBS=ON
 	cmake --build . -j$(nproc)
@@ -56,7 +58,7 @@ fi
 ldconfig
 
 # Build Python bindings with C++ implementation
-# Note: Building from source release should work, unlike building from git repo
+# Older releases can build via setuptools, while newer releases require bazel
 if [ -d "python" ] && [ -f "python/setup.py" ]; then
 	cd python
 	python3 setup.py build --cpp_implementation
@@ -64,10 +66,19 @@ if [ -d "python" ] && [ -f "python/setup.py" ]; then
 	python3 setup.py bdist_wheel --cpp_implementation
 
 	cp dist/*.whl /opt
-	uv pip install /opt/protobuf*.whl
 	cd ..
+elif [ -d "python/dist" ] && [ -f "python/dist/setup.py" ]; then
+	bazel build //python/dist:binary_wheel --cpu "linux-aarch_64"
+	cp bazel-bin/python/dist/*.whl /opt
 else
 	echo "Warning: python directory or setup.py not found, skipping Python bindings build"
+fi
+
+if ls /opt/protobuf*.whl 1> /dev/null 2>&1; then
+	uv pip install /opt/protobuf*.whl
+	if [ "$UPLOAD_WHEEL" = "on" ]; then
+		twine upload --verbose /opt/protobuf*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+	fi
 fi
 
 # Return to /tmp for cleanup
