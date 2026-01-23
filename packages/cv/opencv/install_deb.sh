@@ -19,8 +19,8 @@ apt-get purge -y '.*opencv.*' || echo "previous OpenCV deb installation not foun
 uv pip uninstall opencv-python || echo "previous OpenCV pip installation not found"
 
 # make sure cmake and numpy are still installed
-bash /tmp/cmake/install.sh
-bash /tmp/numpy/install.sh
+bash /tmp/cmake/install.sh || true
+bash /tmp/numpy/install.sh || true
 
 # download and extract the deb packages
 mkdir opencv
@@ -49,8 +49,8 @@ cd ../
 rm -rf opencv
 
 # restore cmake and numpy versions
-bash /tmp/cmake/install.sh
-bash /tmp/numpy/install.sh
+bash /tmp/cmake/install.sh || true
+bash /tmp/numpy/install.sh || true
 
 # manage some install paths
 if [ $ARCH = "aarch64" ]; then
