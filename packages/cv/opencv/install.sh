@@ -26,7 +26,7 @@ else
     if [[ "${ENABLE_CONTRIB}" -eq 1 ]] && [[ "${FORWARD_CONTRIB}" -eq 1 ]]; then
         mkdir -p ${TMP}/opencv-python
         mv ${TMP}/setup-stub.py ${TMP}/opencv-python/setup.py
-        uv pip install -e ${TMP}/opencv-python
+        uv pip install ${TMP}/opencv-python
     fi
 fi
 
