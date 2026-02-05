@@ -15,10 +15,14 @@ ARG CUDA_URL \
     CUDA_ARCH \
     CUDA_INSTALLED_VERSION \
     IS_SBSA \
-    DISTRO="ubuntu2004"
+    DISTRO="ubuntu2004" \
+    CACHE_DOWNLOAD="off"
 
-COPY install.sh /tmp/cuda/install.sh
-RUN /tmp/cuda/install.sh
+COPY install.sh /tmp/install.sh
+RUN --mount=type=cache,target=/tmp/cuda \
+    if [ ! "${CACHE_DOWNLOAD}" = "on" ]; then \
+        rm -rf /tmp/cuda/*; \
+    fi && /tmp/install.sh
 
 ENV CUDA_HOME="/usr/local/cuda"
 ENV NVCC_PATH="$CUDA_HOME/bin/nvcc"

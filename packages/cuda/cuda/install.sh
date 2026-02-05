@@ -12,7 +12,6 @@ apt-get clean
 
 if [ -n "$CUDA_URL" ]; then
     echo "Downloading ${CUDA_DEB}"
-    mkdir -p /tmp/cuda
     cd /tmp/cuda
 
     if [[ "$CUDA_ARCH" == "tegra-aarch64" ]]; then
@@ -27,7 +26,14 @@ if [ -n "$CUDA_URL" ]; then
             -O /etc/apt/preferences.d/cuda-repository-pin-600
     fi
 
-    wget $WGET_FLAGS ${CUDA_URL}
+    local_file=$(basename "${CUDA_URL}")
+    if [ "$CACHE_DOWNLOAD" == "on" ] && [ -f "$local_file" ]; then
+        echo "Using cached download: $local_file"
+    else
+        echo "Downloading ${CUDA_URL}..."
+        wget $WGET_FLAGS ${CUDA_URL}
+    fi
+    
     dpkg -i *.deb
     cp /var/cuda-*-local/cuda-*-keyring.gpg /usr/share/keyrings/
 
@@ -39,7 +45,7 @@ if [ -n "$CUDA_URL" ]; then
         fi
     fi
 else
-    echo "Installing CUDA from Jetpack repositories"
+    echo "Installing CUDA from JetPack repositories"
 fi
 
 apt-get update
@@ -47,8 +53,7 @@ apt-get install -y --no-install-recommends ${CUDA_PACKAGES}
 rm -rf /var/lib/apt/lists/*
 apt-get clean
 
-if [ -n "$CUDA_DEB" ]; then
+if [ -n "$CUDA_URL" ] && [ -n "$CUDA_DEB" ]; then
     dpkg --list | grep cuda
     dpkg -P ${CUDA_DEB}
-    rm -rf /tmp/cuda
 fi
