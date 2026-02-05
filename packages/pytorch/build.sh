@@ -74,7 +74,7 @@ else
 fi
 
 # Delete cache to force ATen codegen; necessary if temp-caching the build dir
-if [[ "${CACHE_BUILD_DIR}" = "on" ]] && [[ -f "/opt/pytorch/build/CMakeCache.txt" ]]; then
+if [[ "${CACHE_BUILD}" = "on" ]] && [[ -f "/opt/pytorch/build/CMakeCache.txt" ]]; then
     rm -rf /opt/pytorch/build/CMakeCache.txt
 fi
 
