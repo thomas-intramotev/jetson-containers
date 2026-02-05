@@ -21,21 +21,18 @@ ARG OPENCV_VERSION \
 ENV OPENCV_VERSION=${OPENCV_VERSION} \
     OPENCV_URL=${OPENCV_URL}
 
-# COPY clone.sh \
-#      install_deps.sh \
-#      $TMP/
-# RUN cd $TMP && ./clone.sh
-
-# COPY build_wheel.sh $TMP/
-# RUN cd $TMP && ./build_wheel.sh
-
-# COPY test.py $TMP/
-
-# COPY install_and_upload_wheel.sh $TMP/
-# RUN cd $TMP && ./install_and_upload_wheel.sh
-
-# COPY build_deb.sh $TMP/
-# RUN cd $TMP && ./build_deb.sh
+RUN if [ "${FORCE_BUILD}" = "on" ]; then \
+        cd /opt && \
+        (git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv \
+            || git clone --recursive https://github.com/opencv/opencv \
+            || echo "Failed to pre-clone opencv") && \
+        (git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv_contrib \
+            || git clone --recursive https://github.com/opencv/opencv_contrib \
+            || echo "Failed to pre-clone opencv_contrib") && \
+        (git clone --branch "${OPENCV_PYTHON}" --recursive https://github.com/opencv/opencv-python \
+            || (git clone --recursive https://github.com/opencv/opencv-python && touch opencv-python/.enable_rolling) \
+            || echo "Failed to pre-clone opencv-python"); \
+    fi
 
 COPY build.sh \
      install.sh \
@@ -47,7 +44,12 @@ COPY build.sh \
 
 COPY test.py $TMP/
 
-RUN cd $TMP && ./install.sh || ./build.sh
+ARG CACHE_BUILD=off
+RUN --mount=type=cache,target=/opt/opencv/build \
+    if [ ! "${CACHE_BUILD}" = "on" ]; then \
+        rm -rf /opt/opencv/build/*; \
+    fi && \
+    cd $TMP && ./install.sh || ./build.sh
 
 RUN if [ ! -f "$TMP/.opencv" ]; then \
       echo "FAILED to install OpenCV $OPENCV_VERSION"; \

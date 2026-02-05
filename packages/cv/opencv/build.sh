@@ -6,15 +6,25 @@ cd /opt
 # install dependencies
 bash $TMP/install_deps.sh
 
+if [! -e "opencv/.git"]; then
+    git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv \
+        || git clone --recursive https://github.com/opencv/opencv
+fi
 
-git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv \
-  || git clone --recursive https://github.com/opencv/opencv
+if [! -e "opencv_contrib/.git"]; then
+    git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv_contrib \
+        || git clone --recursive https://github.com/opencv/opencv_contrib
+fi
 
-git clone --branch "${OPENCV_VERSION}" --recursive https://github.com/opencv/opencv_contrib \
-  || git clone --recursive https://github.com/opencv/opencv_contrib
+if [! -e "opencv-python/.git"]; then
+    git clone --branch "${OPENCV_PYTHON}" --recursive https://github.com/opencv/opencv-python \
+        || git clone --recursive https://github.com/opencv/opencv-python && export ENABLE_ROLLING=1
+fi
 
-git clone --branch "${OPENCV_PYTHON}" --recursive https://github.com/opencv/opencv-python \
-  || git clone --recursive https://github.com/opencv/opencv-python && export ENABLE_ROLLING=1
+if [-f "opencv-python/.enable_rolling"]; then
+    export ENABLE_ROLLING=1
+    rm -f opencv-python/.enable_rolling
+fi
 
 cd /opt/opencv-python/opencv || git checkout --recurse-submodules origin/4.x
 git checkout --recurse-submodules ${OPENCV_VERSION} || git checkout --recurse-submodules origin/4.x
@@ -146,9 +156,9 @@ if [[ "${ENABLE_CONTRIB}" -eq 1 ]] && [[ "${FORWARD_CONTRIB}" -eq 1 ]]; then
 fi
 
 # [FIX] Ensure the build directory is clean to avoid CMake caching issues from previous failed runs.
-echo "Configuring C++ Debian package build..."
-rm -rf /opt/opencv/build
-mkdir /opt/opencv/build
+# echo "Configuring C++ Debian package build..."
+# rm -rf /opt/opencv/build
+# mkdir /opt/opencv/build
 cd /opt/opencv/build
 
 # [FIX] Set the PKG_CONFIG_PATH environment variable.
