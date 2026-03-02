@@ -9,7 +9,9 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG TORCHVISION_VERSION \
-    FORCE_BUILD=off
+    TORCH_CUDA_ARCH_LIST \
+    FORCE_BUILD=off \
+    FORCE_CUDA=1
 
 COPY build.sh install.sh /tmp/torchvision/
 

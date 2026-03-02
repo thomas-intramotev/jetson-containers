@@ -8,7 +8,15 @@ git clone --branch=release/${BRANCH_VERSION} --recursive --depth=1 https://githu
 git clone --recursive --depth=1 https://github.com/pytorch/vision /opt/torchvision
 cd /opt/torchvision
 
+NVCC_FLAGS=""
+for arch in $(echo "$TORCH_CUDA_ARCH_LIST" | tr ';,' ' '); do
+    clean_arch=$(echo "$arch" | tr -d '.')
+    NVCC_FLAGS="${NVCC_FLAGS:+$NVCC_FLAGS }-gencode=arch=compute_${clean_arch},code=sm_${clean_arch}"
+done
+
 BUILD_VERSION=${TORCHVISION_VERSION} \
+FORCE_CUDA=${FORCE_CUDA} \
+NVCC_FLAGS=${NVCC_FLAGS} \
 python3 setup.py --verbose bdist_wheel --dist-dir /opt
 
 cd ../
