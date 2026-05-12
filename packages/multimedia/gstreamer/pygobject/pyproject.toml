@@ -1,0 +1,38 @@
+[build-system]
+requires = [
+    "meson-python>=0.12.1",
+    "meson>=1.2",
+    "ninja",
+    "pycairo>=1.16",
+]
+build-backend = "mesonpy"
+
+[project]
+name = "PyGObject"
+version = "_PYGOBJECT_VERSION_"
+description = "Python bindings for GObject Introspection with GStreamer overrides"
+requires-python = ">=3.9"
+license = { text = "LGPL-2.1-or-later" }
+
+# Notes on what is intentionally NOT here:
+#
+# 1. `setup = ["-Dwheel=true", ...]` is NOT set at the top level.
+#    The `wheel` option belongs to pygobject. It is applied to the
+#    pygobject subproject via `default_options` in meson.build, which
+#    is unambiguous and avoids the top-level project needing a matching
+#    option declaration.
+#
+# 2. `--wrap-mode=nofallback` is NOT passed. Upstream pygobject's own
+#    pyproject.toml uses it, but here we need meson to *allow*
+#    fallback into the pygobject subproject when gst-python does
+#    `dependency('pygobject-3.0', fallback: ['pygobject', ...])`.
+#    System libs (gstreamer, glib, libgirepository, libffi, cairo)
+#    still come from pkg-config because we ship no wrap files for
+#    them - meson has nothing to fall back to.
+
+# --include-subprojects bundles subprojects/ into the sdist so that
+# downstream `pip install <sdist.tar.gz>` works without needing
+# network access to fetch pygobject from gitlab.gnome.org again.
+[tool.meson-python.args]
+dist = ["--include-subprojects"]
+

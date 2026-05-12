@@ -7,44 +7,72 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+ARG PYGOBJECT_VERSION \
+    GST_PYTHON_VERSION \
+    OPENCV_VERSION \
+    OPENCV_URL \
+    FORCE_BUILD=off \
+    REINSTALL_OPENCV=on \
+    OPENCV_ENABLE_CONTRIB=1 \
+    OPENCV_FORWARD_CONTRIB=0 \
+    OPENCV_FORCE_BUILD=off \
+    OPENCV_TMP=/tmp/opencv
 
 # gstreamer1.0-plugins-bad depend on the ubuntu version of opencv, and will fail to install
 # if opencv_cuda is already installed (so remove it and re-install it again after)
 RUN apt-get update && \
     apt-get purge -y '*opencv*' || echo "existing OpenCV installation not found" && \
     apt-get install -y --no-install-recommends \
-		  lsb-release \
+      lsb-release \
       libunwind-dev \
-		  libgstreamer1.0-dev \
-		  gstreamer1.0-tools \
-		  gstreamer1.0-libav \
-		  gstreamer1.0-rtsp \
-		  gstreamer1.0-plugins-good \
-		  gstreamer1.0-plugins-bad \
-		  gstreamer1.0-plugins-ugly \
-		  libgstreamer-plugins-base1.0-dev \
-		  libgstreamer-plugins-good1.0-dev \
-		  libgstreamer-plugins-bad1.0-dev \
-		  libgstrtspserver-1.0-0 \
+      gir1.2-glib-2.0 \
+      libgirepository1.0-dev \
+      libgstreamer1.0-dev \
+      gstreamer1.0-tools \
+      gstreamer1.0-libav \
+      gstreamer1.0-rtsp \
+      gstreamer1.0-plugins-good \
       gstreamer1.0-plugins-bad \
+      gstreamer1.0-plugins-ugly \
       gstreamer1.0-nice \
+      libgstreamer-plugins-base1.0-dev \
+      libgstreamer-plugins-good1.0-dev \
+      libgstreamer-plugins-bad1.0-dev \
+      libgstrtspserver-1.0-0 \
       libnss-mdns \
-      avahi-utils \
-		  python3-gi \
-		  python3-gst-1.0 && \
+      avahi-utils && \
     if [ `lsb_release --codename --short` != 'bionic' ]; then \
     apt-get install -y --no-install-recommends \
-		  gstreamer1.0-plugins-rtp; \
+      gstreamer1.0-plugins-rtp; \
     else echo "skipping packages unavailable for Ubuntu 18.04"; fi \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && ln -s /usr/lib/python3/dist-packages/gi /opt/venv/lib/python3.*/site-packages/ # make gi available in the venv
+    && apt-get clean
 
+COPY pygobject/ /tmp/pygobject
+RUN find /tmp/pygobject -type f | xargs sed -i "s/_PYGOBJECT_VERSION_/${PYGOBJECT_VERSION}/g"
+
+
+# Stage opencv args as env vars, with the names that ${OPENCV_TMP}/install.sh expects
+ENV OPENCV_VERSION=${OPENCV_VERSION} \
+    OPENCV_URL=${OPENCV_URL} \
+    ENABLE_CONTRIB=${OPENCV_ENABLE_CONTRIB} \
+    FORWARD_CONTRIB=${OPENCV_FORWARD_CONTRIB} \
+    FORCE_BUILD=${OPENCV_FORCE_BUILD} \
+    TMP=${OPENCV_TMP}
 
 # re-install opencv and make a copy of these gstreamer headers (some of them get purged)
-RUN cp -r /usr/include/gstreamer-1.0 /tmp && \
-    /tmp/opencv/install.sh && \
+RUN if [ "${REINSTALL_OPENCV}" = "on" ]; then \
+    cp -r /usr/include/gstreamer-1.0 /tmp && \
+    ${OPENCV_TMP}/install.sh && \
     cp -r /tmp/gstreamer-1.0 /usr/include && \
     rm -rf /tmp/gstreamer-1.0 && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libgstwebrtc-1.0.so.0 /usr/lib/$(uname -m)-linux-gnu/libgstwebrtc-1.0.so || \
-    echo "libgstwebrtc already setup"
+    echo "libgstwebrtc already setup" ; \
+    else echo "skipping OpenCV re-installation"; fi
+
+ENV OPENCV_VERSION= \
+    OPENCV_URL= \
+    ENABLE_CONTRIB= \
+    FORWARD_CONTRIB= \
+    FORCE_BUILD= \
+    TMP=
