@@ -7,8 +7,8 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYGOBJECT_VERSION \
-    GST_PYTHON_VERSION \
+ARG GSTREAMER_VERSION \
+    PYGOBJECT_VERSION \
     OPENCV_VERSION \
     OPENCV_URL \
     FORCE_BUILD=off \
@@ -40,17 +40,16 @@ RUN apt-get update && \
       libgstreamer-plugins-bad1.0-dev \
       libgstrtspserver-1.0-0 \
       libnss-mdns \
-      avahi-utils && \
-    if [ `lsb_release --codename --short` != 'bionic' ]; then \
-    apt-get install -y --no-install-recommends \
-      gstreamer1.0-plugins-rtp; \
-    else echo "skipping packages unavailable for Ubuntu 18.04"; fi \
+      avahi-utils \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
 COPY pygobject/ /tmp/pygobject
 RUN find /tmp/pygobject -type f | xargs sed -i "s/_PYGOBJECT_VERSION_/${PYGOBJECT_VERSION}/g"
 
+COPY build.sh install.sh /tmp/pygobject/
+RUN chmod +x /tmp/pygobject/build.sh /tmp/pygobject/install.sh
+RUN /tmp/pygobject/install.sh || /tmp/pygobject/build.sh
 
 # Stage opencv args as env vars, with the names that ${OPENCV_TMP}/install.sh expects
 ENV OPENCV_VERSION=${OPENCV_VERSION} \

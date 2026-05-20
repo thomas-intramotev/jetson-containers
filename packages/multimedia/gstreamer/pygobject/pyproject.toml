@@ -7,13 +7,6 @@ requires = [
 ]
 build-backend = "mesonpy"
 
-[project]
-name = "PyGObject"
-version = "_PYGOBJECT_VERSION_"
-description = "Python bindings for GObject Introspection with GStreamer overrides"
-requires-python = ">=3.9"
-license = { text = "LGPL-2.1-or-later" }
-
 # Notes on what is intentionally NOT here:
 #
 # 1. `setup = ["-Dwheel=true", ...]` is NOT set at the top level.
@@ -29,6 +22,12 @@ license = { text = "LGPL-2.1-or-later" }
 #    System libs (gstreamer, glib, libgirepository, libffi, cairo)
 #    still come from pkg-config because we ship no wrap files for
 #    them - meson has nothing to fall back to.
+[project]
+name = "PyGObject"
+version = "_PYGOBJECT_VERSION_"
+description = "Python bindings for GObject Introspection with GStreamer overrides"
+requires-python = ">=3.9"
+license = { text = "LGPL-2.1-or-later" }
 
 # --include-subprojects bundles subprojects/ into the sdist so that
 # downstream `pip install <sdist.tar.gz>` works without needing
@@ -36,3 +35,10 @@ license = { text = "LGPL-2.1-or-later" }
 [tool.meson-python.args]
 dist = ["--include-subprojects"]
 
+# Don't attempt to package libgstpython.so (enables calling pipelines written in
+# Python from other languages) in the combined wheel: it has to be packaged 
+# separately (there's no corresponding wheel directory)
+[tool.meson-python.wheel]
+exclude = [
+  "{prefix}/lib/*/gstreamer-1.0/libgstpython*",
+]
