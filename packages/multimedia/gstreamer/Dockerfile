@@ -11,6 +11,9 @@ ARG GSTREAMER_VERSION \
     PYGOBJECT_VERSION \
     OPENCV_VERSION \
     OPENCV_URL \
+    GST_PY_PLUGIN_URL \
+    WGET_FLAGS \
+    PYGOBJECT_INSTALL_METHOD=apt \
     FORCE_BUILD=off \
     REINSTALL_OPENCV=on \
     OPENCV_ENABLE_CONTRIB=1 \
@@ -62,6 +65,7 @@ ENV OPENCV_VERSION=${OPENCV_VERSION} \
 # re-install opencv and make a copy of these gstreamer headers (some of them get purged)
 RUN if [ "${REINSTALL_OPENCV}" = "on" ]; then \
     cp -r /usr/include/gstreamer-1.0 /tmp && \
+    (mv ${OPENCV_TMP}/opencv-python/setup.py ${OPENCV_TMP}/setup-stub.py || true) && \
     ${OPENCV_TMP}/install.sh && \
     cp -r /tmp/gstreamer-1.0 /usr/include && \
     rm -rf /tmp/gstreamer-1.0 && \
