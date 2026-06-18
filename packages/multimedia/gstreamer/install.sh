@@ -10,7 +10,9 @@ UV_PY_VERSION="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.ve
 
 if [ "${PYGOBJECT_INSTALL_METHOD}" = "pip" ]; then
   echo "Installing pygobject from pip"
-  uv pip install PyGObject${PYGOBJECT_VERSION:+~=${PYGOBJECT_VERSION}}
+  uv pip install \
+    PyGObject${PYGOBJECT_VERSION:+~=${PYGOBJECT_VERSION}} \
+    pycairo${PYCAIRO_VERSION:+~=${PYCAIRO_VERSION}}
 
   if [ -z "$GST_PY_PLUGIN_URL" ]; then
     GST_PY_PLUGIN_DEB="gstreamer1.0-python${UV_PY_VERSION}-plugin-loader_${GSTREAMER_VERSION}.tar.gz"
@@ -43,4 +45,6 @@ else
   else
     ln -s /usr/lib/python3/dist-packages/gi /opt/venv/lib/python3.*/site-packages/
   fi
+
+  uv pip install pycairo${PYCAIRO_VERSION:+~=${PYCAIRO_VERSION}}
 fi

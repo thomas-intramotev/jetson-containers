@@ -9,6 +9,7 @@ FROM ${BASE_IMAGE}
 
 ARG GSTREAMER_VERSION \
     PYGOBJECT_VERSION \
+    PYCAIRO_VERSION \
     OPENCV_VERSION \
     OPENCV_URL \
     GST_PY_PLUGIN_URL \
@@ -44,6 +45,7 @@ RUN apt-get update && \
       libgstrtspserver-1.0-0 \
       libnss-mdns \
       avahi-utils \
+      libcairo2-dev \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

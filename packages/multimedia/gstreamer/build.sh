@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -ex
 
-apt update && apt install -y libcairo2-dev
-
 cd /tmp
 
 git clone --depth 1 --branch "${GSTREAMER_VERSION}" \
@@ -48,9 +46,13 @@ uv pip install \
   build \
   ninja \
   patchelf \
-  pycairo \
   meson \
   meson-python
+
+# Install pycairo from public index to build backend, which we can stage as
+# wheel for deploy targets
+uv pip install --index-url https://pypi.org/simple/ \
+  pycairo${PYCAIRO_VERSION:+~=${PYCAIRO_VERSION}}
 
 TRIPLET=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
 HOST_ARCH=$(dpkg-architecture -qDEB_HOST_ARCH)
@@ -99,6 +101,9 @@ dpkg-deb --build _deb debs/gstreamer1.0-python${PY_VERSION}-plugin-loader_${GSTR
 
 uv pip install dist/*.whl
 dpkg -i --force-depends debs/*.deb
+
+# Build and stage pycairo wheel
+python -m pip wheel pycairo --no-deps -w dist/
 
 twine upload --verbose dist/*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
 tarpack upload gstreamer1.0-python${PY_VERSION}-plugin-loader_${GSTREAMER_VERSION} debs/ || \
