@@ -3,17 +3,37 @@ set -ex
 
 cd /tmp
 
-git clone --depth 1 --branch "${GSTREAMER_VERSION}" \
-  https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+GST_MAJOR_MINOR=$(echo "${GSTREAMER_VERSION}" | sed -En "s/([0-9]+\.[0-9]+)(\.[0-9]+)*/\1/p")
+
+# Before 1.20 gst-python lived in its own repository; from 1.20 on it is a
+# subproject of the gstreamer monorepo. Clone whichever holds gst-python and
+# point GST_PYTHON_DIR at its root either way.
+if [ "$(printf '%s\n1.20\n' "${GST_MAJOR_MINOR}" | sort -V | head -n1)" = "1.20" ]; then
+  git clone --depth 1 --branch "${GSTREAMER_VERSION}" \
+    https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+  GST_PYTHON_DIR=/tmp/gstreamer/subprojects/gst-python
+else
+  git clone --depth 1 --branch "${GSTREAMER_VERSION}" \
+    https://gitlab.freedesktop.org/gstreamer/gst-python.git
+  GST_PYTHON_DIR=/tmp/gst-python
+fi
 
 VENV_PATH=${VENV_PATH:-/opt/venv}
 BASE_PREFIX="$("$VENV_PATH/bin/python" -c 'import sys; print(sys.base_prefix)')"
 PY_VERSION="$("$VENV_PATH/bin/python" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
 PY_VERSION_NODOT="${PY_VERSION//.}"
 
-# Set 'pure: false' when gst-python searches for python installation
+# Set 'pure: false' when gst-python searches for python installation and 'embed: true'
+# when it declares Python dependency in meson.build
 sed -i -E '/pymod\.find_installation\(/{/pure[[:space:]]*:/!s/(pymod\.find_installation\(.*)\)/\1, pure: false)/}' \
-  gstreamer/subprojects/gst-python/meson.build
+  "${GST_PYTHON_DIR}/meson.build"
+sed -i -E '/python\.dependency\(/{/embed/!s/python\.dependency\(/python.dependency(embed: true, /}' \
+  "${GST_PYTHON_DIR}/meson.build"
+
+# gst-python < 1.18 stamps PLUGINDIR from the prefix-relative libdir option,
+# producing a relative plugin-search path at runtime. Join the prefix explicitly.
+sed -i -E "/PLUGINDIR/{/get_option\('prefix'\)/!s|\.format\(get_option\('libdir'\)\)|.format(join_paths(get_option('prefix'), get_option('libdir')))|}" \
+  "${GST_PYTHON_DIR}/meson.build"
 
 # Configure call to Py_Initialize in gstpythonplugin.c to emulate uv-managed virtual environment
 sed -i -E "s|^([[:space:]]*)Py_Initialize \(\);|\
@@ -37,8 +57,23 @@ sed -i -E "s|^([[:space:]]*)Py_Initialize \(\);|\
 \1    g_critical (\"Py_InitializeFromConfig failed\");\n\
 \1    return FALSE;\n\
 \1}|" \
-  gstreamer/subprojects/gst-python/plugin/gstpythonplugin.c
-ln -s /tmp/gstreamer/subprojects/gst-python /tmp/pygobject/subprojects/gst-python
+  "${GST_PYTHON_DIR}/plugin/gstpythonplugin.c"
+ln -s "${GST_PYTHON_DIR}" /tmp/pygobject/subprojects/gst-python
+
+# gstmodule.c dereferences frame->f_code / frame->f_lasti, which Python 3.11
+# removed from the public C API. Upstream fixed this in 1.20.1. For older
+# versions of gstreamer (and Python 3.11 or newer): apply the patch manually.
+# https://gitlab.freedesktop.org/gstreamer/gstreamer/-/work_items/997
+if [ "$(printf '%s\n1.20.1\n' "${GSTREAMER_VERSION}" | sort -V | head -n1)" = "${GSTREAMER_VERSION}" ] \
+  && [ "${GSTREAMER_VERSION}" != "1.20.1" ] \
+  && [ "$(printf '%s\n3.11\n' "${PY_VERSION}" | sort -V | head -n1)" = "3.11" ]; then
+  GSTMODULE="${GST_PYTHON_DIR}/gi/overrides/gstmodule.c"
+  sed -i -E 's|^([[:space:]]*)PyFrameObject \*frame;|\1PyFrameObject *frame;\n\1PyCodeObject *code;|' "${GSTMODULE}"
+  sed -i -E 's|^([[:space:]]*)frame = PyEval_GetFrame \(\);|\1frame = PyEval_GetFrame ();\n#if PY_VERSION_HEX >= 0x030b0000\n\1code = PyFrame_GetCode (frame);\n#else\n\1code = frame->f_code;\n#endif|' "${GSTMODULE}"
+  sed -i 's|PyUnicode_AsUTF8String (frame->f_code->co_name)|PyUnicode_AsUTF8String (code->co_name)|' "${GSTMODULE}"
+  sed -i 's|PyUnicode_AsUTF8String (frame->f_code->co_filename)|PyUnicode_AsUTF8String (code->co_filename)|' "${GSTMODULE}"
+  sed -i -E 's|^([[:space:]]*)lineno = PyCode_Addr2Line \(frame->f_code, frame->f_lasti\);|#if PY_VERSION_HEX >= 0x030b0000\n\1lineno = PyFrame_GetLineNumber (frame);\n\1Py_DECREF (code);\n#else\n\1lineno = PyCode_Addr2Line (code, frame->f_lasti);\n#endif|' "${GSTMODULE}"
+fi
 
 cd /tmp/pygobject
 
@@ -79,8 +114,6 @@ python -m build --wheel --no-isolation
 
 mkdir -p _deb/usr/lib/$TRIPLET/gstreamer-1.0/ _deb/DEBIAN/
 cp -r _staging/usr/lib/$TRIPLET/gstreamer-1.0/ _deb/usr/lib/$TRIPLET/
-
-GST_MAJOR_MINOR=$(echo "${GSTREAMER_VERSION}" | sed -En "s/([0-9]+\.[0-9]+)(\.[0-9]+)*/\1/p")
 
 cat > _deb/DEBIAN/control <<EOF
 Package: gstreamer1.0-python${PY_VERSION}-plugin-loader
